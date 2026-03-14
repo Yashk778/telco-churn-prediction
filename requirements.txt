@@ -4,3 +4,4 @@ streamlit
 scikit-learn
 xgboost
 lightgbm
+altair==4.2.2
