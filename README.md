@@ -4,7 +4,7 @@ An end-to-end machine learning project for predicting whether a telecom customer
 
 The project covers the complete Data Science workflow — from data cleaning and exploratory data analysis to feature engineering, model comparison, cross-validation, hyperparameter tuning, classification threshold optimization, final evaluation, and Streamlit deployment.
 
-🔗 **[🚀 Live Demo](https://telco-churn-prediction-fj2vhyj55dvcjo8karokro.streamlit.app/)**
+🔗 **[🚀 Live Demo](https://telco-churn-prediction-pte948ddks9epjunuhbrfi.streamlit.app/)**
 
 ---
 
