@@ -1,7 +1,4 @@
-numpy==1.26.4
-pandas
 streamlit
+pandas
+numpy
 scikit-learn
-xgboost
-lightgbm
-altair==4.2.2

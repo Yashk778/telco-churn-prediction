@@ -3,33 +3,54 @@ import pandas as pd
 import pickle
 
 # ---------------------------
-# Load trained pipeline
+# Load final trained pipeline
 # ---------------------------
 
-model = pickle.load(open("Churnp_redictor_Model.pkl", "rb"))
+model = pickle.load(
+    open("Churn_Predictor_Model.pkl", "rb")
+)
+
+# Selected during threshold tuning
+FINAL_THRESHOLD = 0.32
 
 st.title("Telco Customer Churn Prediction")
 st.write("Enter customer details to predict churn risk.")
+
 
 # ---------------------------
 # Customer Inputs
 # ---------------------------
 
-gender_input = st.selectbox("Gender", ["Male", "Female"])
-gender = 1 if gender_input == "Male" else 0
+gender = st.selectbox(
+    "Gender",
+    ["Male", "Female"]
+)
 
-SeniorCitizen = st.selectbox("Senior Citizen", [0, 1])
+SeniorCitizen = st.selectbox(
+    "Senior Citizen",
+    [0, 1]
+)
 
-partner_input = st.selectbox("Partner", ["Yes", "No"])
-Partner = 1 if partner_input == "Yes" else 0
+Partner = st.selectbox(
+    "Partner",
+    ["Yes", "No"]
+)
 
-dependents_input = st.selectbox("Dependents", ["Yes", "No"])
-Dependents = 1 if dependents_input == "Yes" else 0
+Dependents = st.selectbox(
+    "Dependents",
+    ["Yes", "No"]
+)
 
-tenure = st.slider("Tenure (months)", 0, 72)
+tenure = st.slider(
+    "Tenure (months)",
+    0,
+    72
+)
 
-phone_input = st.selectbox("Phone Service", ["Yes", "No"])
-PhoneService = 1 if phone_input == "Yes" else 0
+PhoneService = st.selectbox(
+    "Phone Service",
+    ["Yes", "No"]
+)
 
 MultipleLines = st.selectbox(
     "Multiple Lines",
@@ -76,8 +97,10 @@ Contract = st.selectbox(
     ["Month-to-month", "One year", "Two year"]
 )
 
-# Sent as string — pipeline handles encoding
-PaperlessBilling = st.selectbox("Paperless Billing", ["Yes", "No"])
+PaperlessBilling = st.selectbox(
+    "Paperless Billing",
+    ["Yes", "No"]
+)
 
 PaymentMethod = st.selectbox(
     "Payment Method",
@@ -89,8 +112,48 @@ PaymentMethod = st.selectbox(
     ]
 )
 
-MonthlyCharges = st.number_input("Monthly Charges", min_value=0.0)
-TotalCharges = st.number_input("Total Charges", min_value=0.0)
+MonthlyCharges = st.number_input(
+    "Monthly Charges",
+    min_value=0.0,
+    value=0.0
+)
+
+TotalCharges = st.number_input(
+    "Total Charges",
+    min_value=0.0,
+    value=0.0
+)
+
+
+# ---------------------------
+# Feature Engineering
+# ---------------------------
+
+def create_household_type(partner, dependents):
+
+    if partner == "Yes" and dependents == "No":
+        return "Couple"
+
+    if partner == "No" and dependents == "Yes":
+        return "Single Parent"
+
+    if partner == "Yes" and dependents == "Yes":
+        return "Family"
+
+    return "Single"
+
+
+household_type = create_household_type(
+    Partner,
+    Dependents
+)
+
+# Same rule used during training:
+# tenure >= 24 → Yes
+long_term_customer = (
+    "Yes" if tenure >= 24 else "No"
+)
+
 
 # ---------------------------
 # Prediction
@@ -99,48 +162,62 @@ TotalCharges = st.number_input("Total Charges", min_value=0.0)
 if st.button("Predict Churn"):
 
     input_data = pd.DataFrame({
-        'gender': [int(gender)],
-        'SeniorCitizen': [int(SeniorCitizen)],
-        'Partner': [int(Partner)],
-        'Dependents': [int(Dependents)],
-        'tenure': [int(tenure)],
-        'PhoneService': [int(PhoneService)],
-        'MultipleLines': [MultipleLines],
-        'InternetService': [InternetService],
-        'OnlineSecurity': [OnlineSecurity],
-        'OnlineBackup': [OnlineBackup],
-        'DeviceProtection': [DeviceProtection],
-        'TechSupport': [TechSupport],
-        'StreamingTV': [StreamingTV],
-        'StreamingMovies': [StreamingMovies],
-        'Contract': [Contract],
-        'PaperlessBilling': [PaperlessBilling],  # string, not int
-        'PaymentMethod': [PaymentMethod],
-        'MonthlyCharges': [float(MonthlyCharges)],
-        'TotalCharges': [float(TotalCharges)]
+        "gender": [gender],
+        "SeniorCitizen": [int(SeniorCitizen)],
+        "tenure": [int(tenure)],
+        "PhoneService": [PhoneService],
+
+        "MultipleLines": [MultipleLines],
+        "InternetService": [InternetService],
+        "OnlineSecurity": [OnlineSecurity],
+        "OnlineBackup": [OnlineBackup],
+        "DeviceProtection": [DeviceProtection],
+        "TechSupport": [TechSupport],
+        "StreamingTV": [StreamingTV],
+        "StreamingMovies": [StreamingMovies],
+
+        "Contract": [Contract],
+        "PaperlessBilling": [PaperlessBilling],
+        "PaymentMethod": [PaymentMethod],
+
+        "MonthlyCharges": [float(MonthlyCharges)],
+        "TotalCharges": [float(TotalCharges)],
+
+        # Engineered features used during training
+        "household_type": [household_type],
+        "long_term_customer": [long_term_customer]
     })
 
-    # Force numeric types only for manually encoded columns
-    input_data = input_data.astype({
-        "gender": "int64",
-        "SeniorCitizen": "int64",
-        "Partner": "int64",
-        "Dependents": "int64",
-        "tenure": "int64",
-        "PhoneService": "int64",
-        "MonthlyCharges": "float64",
-        "TotalCharges": "float64"
-    })
 
-    # Ensure all object columns are string to avoid isnan type error
-    for col in input_data.select_dtypes(include='object').columns:
-        input_data[col] = input_data[col].astype(str)
+    # ---------------------------
+    # Get churn probability
+    # ---------------------------
 
-    # Make prediction
-    prediction = model.predict(input_data)
-    probability = model.predict_proba(input_data)[0][1]
+    probability = model.predict_proba(
+        input_data
+    )[0][1]
 
-    if prediction[0] == 1:
-        st.error(f"Customer likely to churn ⚠️ (Risk: {probability*100:.2f}%)")
+
+    # Apply selected threshold
+    prediction = (
+        1 if probability >= FINAL_THRESHOLD else 0
+    )
+
+
+    # ---------------------------
+    # Display Result
+    # ---------------------------
+
+    if prediction == 1:
+
+        st.error(
+            f"Customer likely to churn ⚠️ "
+            f"(Churn Probability: {probability * 100:.2f}%)"
+        )
+
     else:
-        st.success(f"Customer likely to stay ✅ (Churn Risk: {probability*100:.2f}%)")
+
+        st.success(
+            f"Customer likely to stay ✅ "
+            f"(Churn Probability: {probability * 100:.2f}%)"
+        )
